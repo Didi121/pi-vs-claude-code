@@ -138,54 +138,78 @@ export const createEmployee = (req: AuthRequest, res: Response) => {
     
     const data: EmployeeCreateInput = req.body;
     
-    // Basic validation
-    if (!data.firstName || !data.lastName || !data.email || !data.position || !data.department) {
-      res.status(400).json({ error: 'Missing required fields: firstName, lastName, email, position, department' });
+    // Comprehensive validation
+    const errors: string[] = [];
+    
+    if (!data.firstName || !data.firstName.trim()) {
+      errors.push('First name is required');
+    }
+    
+    if (!data.lastName || !data.lastName.trim()) {
+      errors.push('Last name is required');
+    }
+    
+    if (!data.email || !data.email.trim()) {
+      errors.push('Email is required');
+    } else if (!/\S+@\S+\.\S+/.test(data.email)) {
+      errors.push('Email format is invalid');
+    }
+    
+    if (!data.position || !data.position.trim()) {
+      errors.push('Position is required');
+    }
+    
+    if (!data.department || !data.department.trim()) {
+      errors.push('Department is required');
+    }
+    
+    if (!data.hireDate) {
+      errors.push('Hire date is required');
+    } else {
+      const hireDate = new Date(data.hireDate);
+      if (isNaN(hireDate.getTime())) {
+        errors.push('Hire date format is invalid');
+      } else if (hireDate > new Date()) {
+        errors.push('Hire date cannot be in the future');
+      }
+    }
+    
+    if (data.salary !== undefined && data.salary !== null) {
+      const salaryValue = typeof data.salary === 'string' ? parseFloat(data.salary) : data.salary;
+      if (isNaN(salaryValue) || salaryValue < 0) {
+        errors.push('Salary must be a positive number');
+      }
+    }
+    
+    if (errors.length > 0) {
+      res.status(400).json({ error: errors.join(', ') });
       return;
     }
     
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-      res.status(400).json({ error: 'Invalid email format' });
-      return;
-    }
+    // Normalize input data
+    const normalizedData: EmployeeCreateInput = {
+      ...data,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      email: data.email.trim().toLowerCase(),
+      phone: data.phone ? data.phone.trim() : '',
+      position: data.position.trim(),
+      department: data.department.trim(),
+      hireDate: new Date(data.hireDate),
+      salary: data.salary !== undefined && data.salary !== null ? 
+        (typeof data.salary === 'string' ? parseFloat(data.salary) : data.salary) : 0,
+      status: data.status || 'active'
+    };
     
-    // Email uniqueness check
-    const existing = employeeStore.findAll().find(emp => emp.email === data.email);
+    // Email uniqueness check (case insensitive)
+    const existing = employeeStore.findAll().find(emp => 
+      emp.email.toLowerCase() === normalizedData.email.toLowerCase());
     if (existing) {
       res.status(409).json({ error: 'Email already exists' });
       return;
     }
     
-    // Phone validation (optional field)
-    if (data.phone) {
-      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-      if (!phoneRegex.test(data.phone)) {
-        res.status(400).json({ error: 'Invalid phone format' });
-        return;
-      }
-    }
-    
-    // Salary validation
-    if (data.salary && (data.salary < 0 || isNaN(data.salary))) {
-      res.status(400).json({ error: 'Invalid salary amount' });
-      return;
-    }
-    
-    // Set default status if not provided
-    if (!data.status) {
-      data.status = 'active';
-    }
-    
-    // Validate status
-    const validStatuses = ['active', 'inactive', 'archived'];
-    if (!validStatuses.includes(data.status)) {
-      res.status(400).json({ error: 'Invalid status. Must be: active, inactive, or archived' });
-      return;
-    }
-    
-    const newEmployee = employeeStore.create(data);
+    const newEmployee = employeeStore.create(normalizedData);
     
     res.status(201).json({
       message: 'Employee created successfully',
@@ -218,35 +242,47 @@ export const updateEmployee = (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const data: EmployeeUpdateInput = req.body;
     
-    // Validate data if provided
+    // Validate hireDate if provided
+    if (data.hireDate !== undefined) {
+      const hireDate = new Date(data.hireDate);
+      if (isNaN(hireDate.getTime())) {
+        res.status(400).json({ error: 'Hire date format is invalid' });
+        return;
+      } else if (hireDate > new Date()) {
+        res.status(400).json({ error: 'Hire date cannot be in the future' });
+        return;
+      }
+      // Normalize hireDate
+      data.hireDate = hireDate;
+    }
+    
+    // Validate salary if provided
+    if (data.salary !== undefined && data.salary !== null) {
+      const salaryValue = typeof data.salary === 'string' ? parseFloat(data.salary) : data.salary;
+      if (isNaN(salaryValue) || salaryValue < 0) {
+        res.status(400).json({ error: 'Salary must be a positive number' });
+        return;
+      }
+      data.salary = salaryValue;
+    }
+    
+    // Validate email if provided
     if (data.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(data.email)) {
-        res.status(400).json({ error: 'Invalid email format' });
+      if (!/\S+@\S+\.\S+/.test(data.email)) {
+        res.status(400).json({ error: 'Email format is invalid' });
         return;
       }
       
       // Check email uniqueness (excluding current employee)
-      const existing = employeeStore.findAll().find(emp => emp.email === data.email && emp.id !== id);
+      const existing = employeeStore.findAll().find(emp => 
+        emp.email.toLowerCase() === data.email?.toLowerCase() && emp.id !== id);
       if (existing) {
         res.status(409).json({ error: 'Email already exists' });
         return;
       }
     }
     
-    if (data.phone) {
-      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-      if (!phoneRegex.test(data.phone)) {
-        res.status(400).json({ error: 'Invalid phone format' });
-        return;
-      }
-    }
-    
-    if (data.salary && (data.salary < 0 || isNaN(data.salary))) {
-      res.status(400).json({ error: 'Invalid salary amount' });
-      return;
-    }
-    
+    // Validate status if provided
     if (data.status) {
       const validStatuses = ['active', 'inactive', 'archived'];
       if (!validStatuses.includes(data.status)) {

@@ -11,8 +11,31 @@ export interface Employee {
   status: 'active' | 'inactive' | 'archived';
 }
 
-export type EmployeeCreateInput = Omit<Employee, 'id'>;
-export type EmployeeUpdateInput = Partial<EmployeeCreateInput>;
+export interface EmployeeCreateInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  position: string;
+  department: string;
+  hireDate: Date | string;
+  salary?: number;
+  status?: 'active' | 'inactive' | 'archived';
+}
+
+export interface EmployeeCreateInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  position: string;
+  department: string;
+  hireDate: Date | string;
+  salary?: number;
+  status?: 'active' | 'inactive' | 'archived';
+}
+
+export type EmployeeUpdateInput = Partial<Omit<EmployeeCreateInput, 'hireDate'> & { hireDate?: Date | string }>;
 
 // In-memory store for testing (not for production)
 const employees: Employee[] = [];

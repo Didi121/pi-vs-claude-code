@@ -172,7 +172,9 @@ describe('Employees API', () => {
         .send(invalidEmployee);
       
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Missing required fields: firstName, lastName, email, position, department');
+      expect(response.body.error).toContain('First name is required');
+      expect(response.body.error).toContain('Position is required');
+      expect(response.body.error).toContain('Department is required');
     });
 
     it('should return 409 if email already exists', async () => {

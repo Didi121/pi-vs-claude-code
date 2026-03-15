@@ -88,6 +88,7 @@ bun install
 | **pi-pi**               | `extensions/pi-pi.ts`               | Meta-agent that builds Pi agents using parallel research experts for documentation                                                                         |
 | **session-replay**      | `extensions/session-replay.ts`      | Scrollable timeline overlay of session history - showcasing customizable dialog UI                                                                         |
 | **theme-cycler**        | `extensions/theme-cycler.ts`        | Keyboard shortcuts (Ctrl+X/Ctrl+Q) and `/theme` command to cycle/switch between custom themes                                                              |
+| **paperclip-coordinator** | `extensions/paperclip-coordinator.ts` | Integrates Paperclip task management with Pi Coding Agent extensions                                                                                   |
 
 ---
 
@@ -135,6 +136,7 @@ just ext-agent-chain        # Sequential pipeline orchestrator with step chainin
 just ext-pi-pi              # Meta-agent that builds Pi agents using parallel experts
 just ext-session-replay     # Scrollable timeline overlay of session history
 just ext-theme-cycler       # Theme cycler + minimal footer
+just ext-paperclip-coordinator # Paperclip task management integration
 just all                    # Open every extension in its own terminal window
 ```
 

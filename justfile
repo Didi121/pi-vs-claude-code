@@ -75,6 +75,10 @@ ext-session-replay:
 ext-theme-cycler:
     pi -e extensions/theme-cycler.ts -e extensions/minimal.ts
 
+# 17. Paperclip Coordinator: Integrate Paperclip task management
+ext-paperclip-coordinator:
+    pi -e extensions/paperclip-coordinator.ts -e extensions/minimal.ts
+
 # utils
 
 # Open pi with one or more stacked extensions in a new terminal: just open minimal tool-counter

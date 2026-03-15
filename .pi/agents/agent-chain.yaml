@@ -47,3 +47,19 @@ full-review:
       prompt: "Implement this plan:\n\n$INPUT"
     - agent: reviewer
       prompt: "Review this implementation:\n\n$INPUT"
+
+paperclip-tracked:
+  description: "End-to-end pipeline with Paperclip task tracking"
+  steps:
+    - agent: scout
+      prompt: "Explore the codebase and identify: $INPUT"
+    - agent: planner
+      prompt: "Based on this analysis, create a plan:\n\n$INPUT"
+    - agent: paperclip-coordinator
+      prompt: "Create a Paperclip task to track this implementation. Title: 'Implement: $ORIGINAL'. Plan: $INPUT"
+    - agent: builder
+      prompt: "Implement this plan:\n\n$INPUT"
+    - agent: reviewer
+      prompt: "Review this implementation:\n\n$INPUT"
+    - agent: paperclip-coordinator
+      prompt: "Update the Paperclip task with review results. Task ID: $INPUT. Status: in_review. Comment: Implementation reviewed."

@@ -108,8 +108,10 @@ const EmployeeForm = ({ employee, onSubmit, onCancel }) => {
               value={formData.firstName}
               onChange={handleChange}
               className={errors.firstName ? 'error' : ''}
+              aria-required="true"
+              aria-invalid={errors.firstName ? 'true' : 'false'}
             />
-            {errors.firstName && <span className="error-message">{errors.firstName}</span>}
+            {errors.firstName && <span className="error-message" aria-live="polite">{errors.firstName}</span>}
           </div>
           <div className="form-group">
             <label htmlFor="lastName">Last Name *</label>
@@ -120,8 +122,10 @@ const EmployeeForm = ({ employee, onSubmit, onCancel }) => {
               value={formData.lastName}
               onChange={handleChange}
               className={errors.lastName ? 'error' : ''}
+              aria-required="true"
+              aria-invalid={errors.lastName ? 'true' : 'false'}
             />
-            {errors.lastName && <span className="error-message">{errors.lastName}</span>}
+            {errors.lastName && <span className="error-message" aria-live="polite">{errors.lastName}</span>}
           </div>
         </div>
         
