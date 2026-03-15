@@ -8,7 +8,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Box, Text } from "@mariozechner/pi-tui";
+import { Text } from "@mariozechner/pi-tui";
 import { applyExtensionDefaults } from "./themeMap.ts";
 
 const palette = [
@@ -31,38 +31,56 @@ export default function (pi: ExtensionAPI) {
 	const toolColors: Record<string, number[]> = {};
 	let total = 0;
 	let colorIdx = 0;
+	let widgetCtx: any; // Store context for re-rendering
+	let tuiRef: any; // Store tui for requestRender
 
-	pi.on("tool_execution_end", async (event) => {
+	const renderWidget = (theme: any) => {
+		const text = new Text("", 1, 1);
+
+		return {
+			render(width: number): string[] {
+				const entries = Object.entries(counts);
+				const parts = entries.map(([name, count]) => {
+					const rgb = toolColors[name];
+					return bg(rgb, `\x1b[38;2;220;220;220m  ${name} ${count}  \x1b[39m`);
+				});
+				text.setText(
+					theme.fg("accent", `Tools (${total}):`) +
+					(entries.length > 0 ? " " + parts.join(" ") : "")
+				);
+				return text.render(width);
+			},
+			invalidate() {
+				text.invalidate();
+			},
+		};
+	};
+
+	const updateWidget = () => {
+		if (!widgetCtx) return;
+		widgetCtx.ui.setWidget("tool-counter", (_tui: any, theme: any) => {
+			tuiRef = _tui;
+			return renderWidget(theme);
+		});
+	};
+
+	// Use tool_call event (fires BEFORE execution) - same pattern as tilldone.ts
+	pi.on("tool_call", async (event) => {
 		if (!(event.toolName in toolColors)) {
 			toolColors[event.toolName] = palette[colorIdx % palette.length];
 			colorIdx++;
 		}
 		counts[event.toolName] = (counts[event.toolName] || 0) + 1;
 		total++;
+		updateWidget();
 	});
 
-	pi.on("session_start", async (_event, ctx) => {
-		applyExtensionDefaults(import.meta.url, ctx);
-		ctx.ui.setWidget("tool-counter", (_tui, theme) => {
-			const text = new Text("", 1, 1);
-
-			return {
-				render(width: number): string[] {
-					const entries = Object.entries(counts);
-					const parts = entries.map(([name, count]) => {
-						const rgb = toolColors[name];
-						return bg(rgb, `\x1b[38;2;220;220;220m  ${name} ${count}  \x1b[39m`);
-					});
-					text.setText(
-						theme.fg("accent", `Tools (${total}):`) +
-						(entries.length > 0 ? " " + parts.join(" ") : "")
-					);
-					return text.render(width);
-				},
-				invalidate() {
-					text.invalidate();
-				},
-			};
+	pi.on("session_start", async (_event, _ctx) => {
+		widgetCtx = _ctx;
+		applyExtensionDefaults(import.meta.url, _ctx);
+		_ctx.ui.setWidget("tool-counter", (_tui, theme) => {
+			tuiRef = _tui;
+			return renderWidget(theme);
 		});
 	});
 }

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: personnel-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: personnel-backend
+  template:
+    metadata:
+      labels:
+        app: personnel-backend
+    spec:
+      containers:
+      - name: backend
+        image: your-registry/personnel-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: personnel-secrets
+              key: database-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: personnel-backend
+spec:
+  selector:
+    app: personnel-backend
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: ClusterIP

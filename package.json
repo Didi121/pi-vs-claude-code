@@ -4,6 +4,30 @@
   "type": "module",
   "description": "Pi Coding Agent extension playground",
   "dependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/dotenv": "^8.2.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3",
     "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/supertest": "^6.0.0",
+    "@vitest/coverage-v8": "~2.1.9",
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "ts-node src/server.ts"
   }
 }

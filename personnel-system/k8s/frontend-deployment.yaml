@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: personnel-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: personnel-frontend
+  template:
+    metadata:
+      labels:
+        app: personnel-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: your-registry/personnel-frontend:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: personnel-frontend
+spec:
+  selector:
+    app: personnel-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer

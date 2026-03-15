@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+  title: Personnel Management System API
+  description: |
+    API REST pour la gestion des employés avec CRUD complet, validation des données
+    et gestion des droits d'accès.
+    
+    ## Fonctionnalités
+    - Création, lecture, modification et suppression d'employés
+    - Recherche et filtrage par département, statut, etc.
+    - Pagination des résultats
+    - Archivage (soft delete) des employés
+  version: 1.0.0
+  contact:
+    name: Équipe Technique
+    email: tech@example.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement local
+  - url: https://api.example.com/api
+    description: Serveur de production
+
+tags:
+  - name: Employees
+    description: Opérations sur les employés
+
+paths:
+  /employees:
+    get:
+      tags:
+        - Employees
+      summary: Liste tous les employés
+      description: Récupère une liste paginée d'employés avec support de filtrage et recherche.
+      operationId: getEmployees
+      parameters:
+        - name: search
+          in: query
+          description: Terme de recherche (nom, prénom, email)
+          required: false
+          schema:
+            type: string
+        - name: department
+          in: query
+          description: Filtrer par département
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filtrer par statut
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, archived]
+        - name: page
+          in: query
+          description: Numéro de page (1-indexed)
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Liste d'employés récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeListResponse'
+        '400':
+          description: Paramètres de requête invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Employees
+      summary: Crée un nouvel employé
+      description: Crée un nouvel employé avec les informations fournies.
+      operationId: createEmployee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeCreateInput'
+      responses:
+        '201':
+          description: Employé créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          description: Données invalides ou champs requis manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email déjà existant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /employees/{id}:
+    get:
+      tags:
+        - Employees
+      summary: Récupère un employé par ID
+      description: Récupère les détails d'un employé spécifique.
+      operationId: getEmployeeById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de l'employé
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails de l'employé récupérés avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employé non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Employees
+      summary: Met à jour complètement un employé
+      description: Remplace toutes les propriétés d'un employé.
+      operationId: updateEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de l'employé
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdateInput'
+      responses:
+        '200':
+          description: Employé mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employé non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Employees
+      summary: Met à jour partiellement un employé
+      description: Met à jour uniquement les propriétés fournies.
+      operationId: patchEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de l'employé
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdateInput'
+      responses:
+        '200':
+          description: Employé mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employé non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Employees
+      summary: Supprime définitivement un employé
+      description: Supprime un employé de la base de données. Cette opération est irréversible.
+      operationId: deleteEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de l'employé
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Employé supprimé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employé non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /employees/{id}/archive:
+    post:
+      tags:
+        - Employees
+      summary: Archive un employé (soft delete)
+      description: Marque un employé comme archivé sans le supprimer de la base de données.
+      operationId: softDeleteEmployee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID de l'employé
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Employé archivé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Employé non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Employee:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - position
+        - department
+        - hireDate
+        - salary
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant unique de l'employé
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        firstName:
+          type: string
+          description: Prénom de l'employé
+          example: "Jean"
+        lastName:
+          type: string
+          description: Nom de famille de l'employé
+          example: "Dupont"
+        email:
+          type: string
+          format: email
+          description: Adresse email unique
+          example: "jean.dupont@example.com"
+        phone:
+          type: string
+          description: Numéro de téléphone
+          example: "+33 1 23 45 67 89"
+        position:
+          type: string
+          description: Poste occupé
+          example: "Développeur Senior"
+        department:
+          type: string
+          description: Département
+          example: "Engineering"
+        hireDate:
+          type: string
+          format: date
+          description: Date d'embauche
+          example: "2023-01-15"
+        salary:
+          type: number
+          format: float
+          description: Salaire annuel
+          example: 55000
+        status:
+          type: string
+          enum: [active, inactive, archived]
+          description: Statut de l'employé
+          example: "active"
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        firstName: "Jean"
+        lastName: "Dupont"
+        email: "jean.dupont@example.com"
+        phone: "+33 1 23 45 67 89"
+        position: "Développeur Senior"
+        department: "Engineering"
+        hireDate: "2023-01-15"
+        salary: 55000
+        status: "active"
+
+    EmployeeCreateInput:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+      properties:
+        firstName:
+          type: string
+          description: Prénom de l'employé
+          example: "Jean"
+        lastName:
+          type: string
+          description: Nom de famille de l'employé
+          example: "Dupont"
+        email:
+          type: string
+          format: email
+          description: Adresse email unique
+          example: "jean.dupont@example.com"
+        phone:
+          type: string
+          description: Numéro de téléphone
+          example: "+33 1 23 45 67 89"
+        position:
+          type: string
+          description: Poste occupé
+          example: "Développeur Senior"
+        department:
+          type: string
+          description: Département
+          example: "Engineering"
+        hireDate:
+          type: string
+          format: date
+          description: Date d'embauche
+          example: "2023-01-15"
+        salary:
+          type: number
+          format: float
+          description: Salaire annuel
+          example: 55000
+        status:
+          type: string
+          enum: [active, inactive, archived]
+          description: Statut de l'employé (défaut: active)
+          example: "active"
+
+    EmployeeUpdateInput:
+      type: object
+      description: Toutes les propriétés sont optionnelles pour les mises à jour partielles
+      properties:
+        firstName:
+          type: string
+          description: Prénom de l'employé
+          example: "Jean"
+        lastName:
+          type: string
+          description: Nom de famille de l'employé
+          example: "Dupont"
+        email:
+          type: string
+          format: email
+          description: Adresse email unique
+          example: "jean.dupont@example.com"
+        phone:
+          type: string
+          description: Numéro de téléphone
+          example: "+33 1 23 45 67 89"
+        position:
+          type: string
+          description: Poste occupé
+          example: "Développeur Senior"
+        department:
+          type: string
+          description: Département
+          example: "Engineering"
+        hireDate:
+          type: string
+          format: date
+          description: Date d'embauche
+          example: "2023-01-15"
+        salary:
+          type: number
+          format: float
+          description: Salaire annuel
+          example: 55000
+        status:
+          type: string
+          enum: [active, inactive, archived]
+          description: Statut de l'employé
+          example: "active"
+
+    EmployeeListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Employee'
+        total:
+          type: integer
+          description: Nombre total d'employés correspondant aux filtres
+          example: 150
+        page:
+          type: integer
+          description: Numéro de page actuel
+          example: 1
+        limit:
+          type: integer
+          description: Nombre d'éléments par page
+          example: 10
+
+    SuccessMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Employee deleted"
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Message d'erreur
+          example: "Employee not found"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

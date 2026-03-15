@@ -18,18 +18,26 @@ import { applyExtensionDefaults } from "./themeMap.ts";
 
 export default function (pi: ExtensionAPI) {
 	const counts: Record<string, number> = {};
+	let tuiRef: any; // Store tui for re-rendering
 
-	pi.on("tool_execution_end", async (event) => {
+	// Use tool_call event (fires BEFORE execution) - same pattern as tilldone.ts
+	pi.on("tool_call", async (event) => {
 		counts[event.toolName] = (counts[event.toolName] || 0) + 1;
+		// Trigger re-render after count updates
+		if (tuiRef) tuiRef.requestRender();
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
 		applyExtensionDefaults(import.meta.url, ctx);
 		ctx.ui.setFooter((tui, theme, footerData) => {
+			tuiRef = tui; // Store reference
 			const unsub = footerData.onBranchChange(() => tui.requestRender());
 
 			return {
-				dispose: unsub,
+				dispose: () => {
+					unsub();
+					tuiRef = undefined;
+				},
 				invalidate() {},
 				render(width: number): string[] {
 					// --- Line 1: cwd + branch (left), tokens + cost (right) ---

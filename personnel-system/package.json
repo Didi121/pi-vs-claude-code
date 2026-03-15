@@ -1,0 +1,15 @@
+{
+  "name": "personnel-system",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Système de gestion du personnel",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Run backend or frontend separately'",
+    "build": "echo 'Build scripts to be defined'",
+    "test": "echo 'Test scripts to be defined'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

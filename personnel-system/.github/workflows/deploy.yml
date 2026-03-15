@@ -1,0 +1,42 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./personnel-system/backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/personnel-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./personnel-system/frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/personnel-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    steps:
+      - name: Deploy to Kubernetes
+        run: echo "Deploying to staging environment"
+        # Add actual kubectl commands here
