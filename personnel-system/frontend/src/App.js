@@ -10,16 +10,19 @@ function App() {
   const [error, setError] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
   // Fetch employees from API
   useEffect(() => {
     fetchEmployees();
   }, []);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (queryParams = '') => {
     setLoading(true);
     try {
-      const response = await fetch('/api/employees');
+      const url = queryParams ? `/api/employees?${queryParams}` : '/api/employees';
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -71,6 +74,78 @@ function App() {
     setEmployeeToDelete(null);
   };
 
+  const handleAddEmployee = () => {
+    setEditingEmployee(null);
+    setShowForm(true);
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setShowForm(true);
+  };
+
+  const handleFormSubmit = async (formData) => {
+    try {
+      let response;
+      
+      if (editingEmployee) {
+        // Update existing employee
+        response = await fetch(`/api/employees/${editingEmployee.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+      } else {
+        // Create new employee
+        response = await fetch('/api/employees', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (editingEmployee) {
+        // Update employee in local state
+        setEmployees(employees.map(emp => 
+          emp.id === editingEmployee.id ? result.data : emp
+        ));
+      } else {
+        // Add new employee to local state
+        setEmployees([...employees, result.data]);
+      }
+      
+      // Close form and reset state
+      setShowForm(false);
+      setEditingEmployee(null);
+      
+      // Show success message
+      alert(editingEmployee ? 'Employee updated successfully' : 'Employee added successfully');
+      
+      // Refresh the employee list
+      fetchEmployees();
+    } catch (err) {
+      setError(editingEmployee ? 'Failed to update employee' : 'Failed to add employee');
+      console.error(editingEmployee ? 'Error updating employee:' : 'Error adding employee:', err);
+      throw err; // Re-throw to let the form handle it
+    }
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingEmployee(null);
+  };
+
   if (loading && employees.length === 0) {
     return <div className="app">Loading...</div>;
   }
@@ -84,11 +159,27 @@ function App() {
       {error && <div className="error-message">{error}</div>}
       
       <main className="app-main">
-        <EmployeeList 
-          employees={employees}
-          onDeleteClick={handleDeleteClick}
-          loading={loading}
-        />
+        {showForm ? (
+          <EmployeeForm 
+            employee={editingEmployee}
+            onSubmit={handleFormSubmit}
+            onCancel={handleFormCancel}
+          />
+        ) : (
+          <>
+            <div className="actions-bar">
+              <button className="btn btn-primary" onClick={handleAddEmployee}>
+                Add New Employee
+              </button>
+            </div>
+            <EmployeeList 
+              employees={employees}
+              onDeleteClick={handleDeleteClick}
+              loading={loading}
+              fetchEmployees={fetchEmployees}
+            />
+          </>
+        )}
       </main>
       
       {showDeleteModal && (

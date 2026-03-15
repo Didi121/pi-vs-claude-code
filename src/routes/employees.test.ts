@@ -1,17 +1,36 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../app.js';
 import { employeeStore } from '../models/employee.js';
 
+// Generate a valid JWT token for testing (admin role)
+const generateTestToken = () => {
+  const payload = {
+    userId: 'test-user-id',
+    username: 'testadmin',
+    role: 'admin' as const,
+  };
+  const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+  return jwt.sign(payload, secret, { expiresIn: '1h' });
+};
+
 describe('Employees API', () => {
+  let testToken: string;
+
+  let agent: any;
+
   beforeEach(() => {
     // Clear the store before each test
     employeeStore.clear();
+    testToken = generateTestToken();
+    agent = request.agent(app);
+    agent.set('Authorization', `Bearer ${testToken}`);
   });
 
   describe('GET /api/employees', () => {
     it('should return empty list when no employees', async () => {
-      const response = await request(app).get('/api/employees');
+      const response = await agent.get('/api/employees');
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual([]);
       expect(response.body.total).toBe(0);
@@ -22,7 +41,7 @@ describe('Employees API', () => {
         firstName: 'John',
         lastName: 'Doe',
         email: 'john.doe@example.com',
-        phone: '+123456789',
+        phone: '1234567890',
         position: 'Developer',
         department: 'IT',
         hireDate: new Date('2023-01-01'),
@@ -30,7 +49,7 @@ describe('Employees API', () => {
         status: 'active',
       });
 
-      const response = await request(app).get('/api/employees');
+      const response = await agent.get('/api/employees');
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].firstName).toBe('John');
@@ -41,7 +60,7 @@ describe('Employees API', () => {
         firstName: 'Alice',
         lastName: 'Smith',
         email: 'alice@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Manager',
         department: 'HR',
         hireDate: new Date(),
@@ -52,7 +71,7 @@ describe('Employees API', () => {
         firstName: 'Bob',
         lastName: 'Johnson',
         email: 'bob@example.com',
-        phone: '+222',
+        phone: '1234567890',
         position: 'Designer',
         department: 'Design',
         hireDate: new Date(),
@@ -60,7 +79,7 @@ describe('Employees API', () => {
         status: 'active',
       });
 
-      const response = await request(app).get('/api/employees?search=Alice');
+      const response = await agent.get('/api/employees?search=Alice');
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].firstName).toBe('Alice');
@@ -72,7 +91,7 @@ describe('Employees API', () => {
           firstName: `User${i}`,
           lastName: `Last${i}`,
           email: `user${i}@example.com`,
-          phone: '+123',
+          phone: '1234567890',
           position: 'Worker',
           department: 'Dept',
           hireDate: new Date(),
@@ -81,7 +100,7 @@ describe('Employees API', () => {
         });
       }
 
-      const response = await request(app).get('/api/employees?page=2&limit=5');
+      const response = await agent.get('/api/employees?page=2&limit=5');
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(5);
       expect(response.body.page).toBe(2);
@@ -96,7 +115,7 @@ describe('Employees API', () => {
         firstName: 'Jane',
         lastName: 'Doe',
         email: 'jane.doe@example.com',
-        phone: '+987654321',
+        phone: '1234567890',
         position: 'Engineer',
         department: 'Engineering',
         hireDate: new Date(),
@@ -104,14 +123,14 @@ describe('Employees API', () => {
         status: 'active',
       });
 
-      const response = await request(app).get(`/api/employees/${employee.id}`);
+      const response = await agent.get(`/api/employees/${employee.id}`);
       expect(response.status).toBe(200);
       expect(response.body.id).toBe(employee.id);
       expect(response.body.firstName).toBe('Jane');
     });
 
     it('should return 404 if employee not found', async () => {
-      const response = await request(app).get('/api/employees/non-existent-id');
+      const response = await agent.get('/api/employees/non-existent-id');
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Employee not found');
     });
@@ -123,7 +142,7 @@ describe('Employees API', () => {
         firstName: 'New',
         lastName: 'Employee',
         email: 'new@example.com',
-        phone: '+333',
+        phone: '1234567890',
         position: 'Analyst',
         department: 'Finance',
         hireDate: '2024-01-01',
@@ -131,14 +150,15 @@ describe('Employees API', () => {
         status: 'active',
       };
 
-      const response = await request(app)
+      const response = await agent
         .post('/api/employees')
         .send(newEmployee);
+      console.log('Response:', response.status, response.body);
       
       expect(response.status).toBe(201);
-      expect(response.body.id).toBeDefined();
-      expect(response.body.firstName).toBe('New');
-      expect(response.body.email).toBe('new@example.com');
+      expect(response.body.data.id).toBeDefined();
+      expect(response.body.data.firstName).toBe('New');
+      expect(response.body.data.email).toBe('new@example.com');
     });
 
     it('should return 400 if required fields missing', async () => {
@@ -147,12 +167,12 @@ describe('Employees API', () => {
         email: 'missing@example.com',
       };
 
-      const response = await request(app)
+      const response = await agent
         .post('/api/employees')
         .send(invalidEmployee);
       
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Missing required fields');
+      expect(response.body.error).toBe('Missing required fields: firstName, lastName, email, position, department');
     });
 
     it('should return 409 if email already exists', async () => {
@@ -160,7 +180,7 @@ describe('Employees API', () => {
         firstName: 'Existing',
         lastName: 'User',
         email: 'duplicate@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Staff',
         department: 'HR',
         hireDate: new Date(),
@@ -172,7 +192,7 @@ describe('Employees API', () => {
         firstName: 'Another',
         lastName: 'Person',
         email: 'duplicate@example.com',
-        phone: '+222',
+        phone: '1234567890',
         position: 'Other',
         department: 'IT',
         hireDate: '2024-02-02',
@@ -180,7 +200,7 @@ describe('Employees API', () => {
         status: 'active',
       };
 
-      const response = await request(app)
+      const response = await agent
         .post('/api/employees')
         .send(duplicateEmployee);
       
@@ -195,7 +215,7 @@ describe('Employees API', () => {
         firstName: 'Original',
         lastName: 'Name',
         email: 'original@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Old',
         department: 'Dept',
         hireDate: new Date(),
@@ -207,7 +227,7 @@ describe('Employees API', () => {
         firstName: 'Updated',
         lastName: 'Name',
         email: 'updated@example.com',
-        phone: '+222',
+        phone: '1234567890',
         position: 'New',
         department: 'NewDept',
         hireDate: '2024-03-01',
@@ -215,19 +235,19 @@ describe('Employees API', () => {
         status: 'inactive',
       };
 
-      const response = await request(app)
+      const response = await agent
         .put(`/api/employees/${employee.id}`)
         .send(updateData);
       
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(employee.id);
-      expect(response.body.firstName).toBe('Updated');
-      expect(response.body.email).toBe('updated@example.com');
-      expect(response.body.salary).toBe(20000);
+      expect(response.body.data.id).toBe(employee.id);
+      expect(response.body.data.firstName).toBe('Updated');
+      expect(response.body.data.email).toBe('updated@example.com');
+      expect(response.body.data.salary).toBe(20000);
     });
 
     it('should return 404 if employee not found', async () => {
-      const response = await request(app)
+      const response = await agent
         .put('/api/employees/non-existent-id')
         .send({ firstName: 'Any' });
       
@@ -242,7 +262,7 @@ describe('Employees API', () => {
         firstName: 'Partial',
         lastName: 'Update',
         email: 'partial@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Old',
         department: 'Dept',
         hireDate: new Date(),
@@ -255,18 +275,18 @@ describe('Employees API', () => {
         salary: 35000,
       };
 
-      const response = await request(app)
+      const response = await agent
         .patch(`/api/employees/${employee.id}`)
         .send(patchData);
       
       expect(response.status).toBe(200);
-      expect(response.body.firstName).toBe('Patched');
-      expect(response.body.lastName).toBe('Update'); // unchanged
-      expect(response.body.salary).toBe(35000);
+      expect(response.body.data.firstName).toBe('Patched');
+      expect(response.body.data.lastName).toBe('Update'); // unchanged
+      expect(response.body.data.salary).toBe(35000);
     });
 
     it('should return 404 if employee not found', async () => {
-      const response = await request(app)
+      const response = await agent
         .patch('/api/employees/non-existent-id')
         .send({ firstName: 'Any' });
       
@@ -281,7 +301,7 @@ describe('Employees API', () => {
         firstName: 'ToDelete',
         lastName: 'User',
         email: 'delete@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Temp',
         department: 'Temp',
         hireDate: new Date(),
@@ -289,16 +309,16 @@ describe('Employees API', () => {
         status: 'active',
       });
 
-      const response = await request(app)
+      const response = await agent
         .delete(`/api/employees/${employee.id}`);
       
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Employee deleted');
+      expect(response.body.message).toBe('Employee deleted successfully');
       expect(employeeStore.findById(employee.id)).toBeUndefined();
     });
 
     it('should return 404 if employee not found', async () => {
-      const response = await request(app)
+      const response = await agent
         .delete('/api/employees/non-existent-id');
       
       expect(response.status).toBe(404);
@@ -312,7 +332,7 @@ describe('Employees API', () => {
         firstName: 'ToArchive',
         lastName: 'User',
         email: 'archive@example.com',
-        phone: '+111',
+        phone: '1234567890',
         position: 'Staff',
         department: 'HR',
         hireDate: new Date(),
@@ -320,17 +340,17 @@ describe('Employees API', () => {
         status: 'active',
       });
 
-      const response = await request(app)
+      const response = await agent
         .post(`/api/employees/${employee.id}/archive`);
       
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Employee soft-deleted (archived)');
+      expect(response.body.message).toBe('Employee archived successfully');
       const archived = employeeStore.findById(employee.id);
       expect(archived?.status).toBe('archived');
     });
 
     it('should return 404 if employee not found', async () => {
-      const response = await request(app)
+      const response = await agent
         .post('/api/employees/non-existent-id/archive');
       
       expect(response.status).toBe(404);
